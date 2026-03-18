@@ -81,6 +81,13 @@ jobs:
           repository: vankadarasuresh/GitHub_Actions_Platform
           ref: main
 
+      - name: Checkout Application Repo
+        uses: actions/checkout@v4
+        with:
+          repository: vankadarasuresh/GitHub_Actions_Application
+          ref: main
+          path: application
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -108,7 +115,7 @@ jobs:
         run: |
           cd terraform-modules/load-balancer
           terraform plan \
-            -var-file="${{ inputs.tfvars_file }}" \
+            -var-file="$GITHUB_WORKSPACE/application/${{ inputs.tfvars_file }}" \
             -var="backend_pool_ids=${{ inputs.backend_pool_ids }}" \
             -out=tfplan
         env:

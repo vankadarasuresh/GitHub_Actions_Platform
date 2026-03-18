@@ -77,6 +77,13 @@ jobs:
           repository: vankadarasuresh/GitHub_Actions_Platform
           ref: main
 
+      - name: Checkout Application Repo
+        uses: actions/checkout@v4
+        with:
+          repository: vankadarasuresh/GitHub_Actions_Application
+          ref: main
+          path: application
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -103,7 +110,7 @@ jobs:
         id: plan
         run: |
           cd terraform-modules/storage-account
-          terraform plan -var-file="${{ inputs.tfvars_file }}" -out=tfplan
+          terraform plan -var-file="$GITHUB_WORKSPACE/application/${{ inputs.tfvars_file }}" -out=tfplan
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
