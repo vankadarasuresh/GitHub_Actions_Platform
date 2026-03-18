@@ -40,6 +40,15 @@ on:
       ARM_ACCESS_KEY:
         description: 'ARM Access Key for Terraform backend'
         required: true
+      BACKEND_RESOURCE_GROUP:
+        description: 'Backend storage resource group name'
+        required: true
+      BACKEND_STORAGE_ACCOUNT:
+        description: 'Backend storage account name'
+        required: true
+      BACKEND_CONTAINER:
+        description: 'Backend storage container name'
+        required: true
     outputs:
       loadbalancer_id:
         description: 'Azure Load Balancer ID'
@@ -101,25 +110,11 @@ jobs:
       - name: Terraform Init
         run: |
           cd terraform-modules/load-balancer
-          if [ "${{ inputs.environment }}" = "dev" ]; then
-            terraform init \
-              -backend-config="resource_group_name=rg-terraform-state-dev" \
-              -backend-config="storage_account_name=tfstatedev987" \
-              -backend-config="container_name=dev-state" \
-              -backend-config="key=load-balancer.tfstate"
-          elif [ "${{ inputs.environment }}" = "staging" ]; then
-            terraform init \
-              -backend-config="resource_group_name=rg-terraform-state-staging" \
-              -backend-config="storage_account_name=tfstatestaging123" \
-              -backend-config="container_name=staging-state" \
-              -backend-config="key=load-balancer.tfstate"
-          elif [ "${{ inputs.environment }}" = "prod" ]; then
-            terraform init \
-              -backend-config="resource_group_name=rg-terraform-state-prod" \
-              -backend-config="storage_account_name=tfstateprod999" \
-              -backend-config="container_name=prod-state" \
-              -backend-config="key=load-balancer.tfstate"
-          fi
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.BACKEND_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.BACKEND_CONTAINER }}" \
+            -backend-config="key=load-balancer.tfstate"
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
