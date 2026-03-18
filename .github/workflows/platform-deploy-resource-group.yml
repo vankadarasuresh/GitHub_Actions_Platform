@@ -1,0 +1,150 @@
+name: Platform - Deploy Azure Resource Group
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Environment name (dev, staging, prod)'
+        required: true
+        type: string
+      tfvars_file:
+        description: 'Path to terraform variables file'
+        required: true
+        type: string
+      terraform_version:
+        description: 'Terraform version to use'
+        required: false
+        type: string
+        default: '1.5.0'
+    secrets:
+      AZURE_CREDENTIALS:
+        description: 'Azure credentials JSON for authentication'
+        required: true
+      AZURE_CLIENT_ID:
+        description: 'Azure Service Principal Client ID'
+        required: true
+      AZURE_CLIENT_SECRET:
+        description: 'Azure Service Principal Client Secret'
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        description: 'Azure Subscription ID'
+        required: true
+      AZURE_TENANT_ID:
+        description: 'Azure Tenant ID'
+        required: true
+      ARM_ACCESS_KEY:
+        description: 'ARM Access Key for Terraform backend'
+        required: true
+    outputs:
+      resource_group_id:
+        description: 'Azure Resource Group ID'
+        value: ${{ jobs.deploy.outputs.resource_group_id }}
+      resource_group_name:
+        description: 'Azure Resource Group Name'
+        value: ${{ jobs.deploy.outputs.resource_group_name }}
+
+jobs:
+  init:
+    name: Validate Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate environment
+        run: |
+          if [[ "${{ inputs.environment }}" != "dev" && "${{ inputs.environment }}" != "staging" && "${{ inputs.environment }}" != "prod" ]]; then
+            echo "Invalid environment: ${{ inputs.environment }}"
+            exit 1
+          fi
+          echo "✓ Environment validation passed"
+
+  deploy:
+    name: Deploy Resource Group
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    needs: init
+    outputs:
+      resource_group_id: ${{ steps.terraform_output.outputs.resource_group_id }}
+      resource_group_name: ${{ steps.terraform_output.outputs.resource_group_name }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          repository: vankadarasuresh/GitHub_Actions_Platform
+          ref: main
+
+      - name: Checkout Application Repo
+        uses: actions/checkout@v4
+        with:
+          repository: vankadarasuresh/GitHub_Actions_Application
+          ref: main
+          path: application
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+
+      - name: Authenticate to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform-modules/resource-group
+          if [ "${{ inputs.environment }}" = "dev" ]; then
+            terraform init \
+              -backend-config="resource_group_name=rg-terraform-state-dev" \
+              -backend-config="storage_account_name=tfstatedev987" \
+              -backend-config="container_name=dev-state" \
+              -backend-config="key=resource-group.tfstate"
+          elif [ "${{ inputs.environment }}" = "staging" ]; then
+            terraform init \
+              -backend-config="resource_group_name=rg-terraform-state-staging" \
+              -backend-config="storage_account_name=tfstatestaging123" \
+              -backend-config="container_name=staging-state" \
+              -backend-config="key=resource-group.tfstate"
+          elif [ "${{ inputs.environment }}" = "prod" ]; then
+            terraform init \
+              -backend-config="resource_group_name=rg-terraform-state-prod" \
+              -backend-config="storage_account_name=tfstateprod999" \
+              -backend-config="container_name=prod-state" \
+              -backend-config="key=resource-group.tfstate"
+          fi
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_ACCESS_KEY: ${{ secrets.ARM_ACCESS_KEY }}
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          cd terraform-modules/resource-group
+          terraform plan -var-file="$GITHUB_WORKSPACE/application/${{ inputs.tfvars_file }}" -out=tfplan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Terraform Apply
+        run: |
+          cd terraform-modules/resource-group
+          terraform apply -auto-approve tfplan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Capture Terraform Outputs
+        id: terraform_output
+        run: |
+          cd terraform-modules/resource-group
+          echo "resource_group_id=$(terraform output -raw id)" >> $GITHUB_OUTPUT
+          echo "resource_group_name=$(terraform output -raw name)" >> $GITHUB_OUTPUT
+
+      - name: Azure Logout
+        run: az logout
