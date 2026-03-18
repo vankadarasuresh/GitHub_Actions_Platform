@@ -153,8 +153,9 @@ jobs:
         run: |
           cd terraform-modules/load-balancer
           echo "Apply failed, refreshing state and retrying..."
-          terraform apply -refresh-only -auto-approve
-          terraform apply -auto-approve tfplan
+          timeout 5m terraform apply -refresh-only -auto-approve || echo "Refresh timed out or failed"
+          echo "Retrying apply..."
+          timeout 10m terraform apply -auto-approve tfplan || exit 1
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}

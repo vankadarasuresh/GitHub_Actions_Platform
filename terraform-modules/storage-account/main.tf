@@ -31,6 +31,7 @@ resource "azurerm_storage_account" "main" {
   # Blob properties for soft delete
   blob_properties {
     change_feed_enabled = true
+    versioning_enabled  = true
     
     delete_retention_policy {
       days = var.blob_delete_retention_days
@@ -107,5 +108,5 @@ resource "azurerm_monitor_diagnostic_setting" "storage_diagnostics" {
     category = "StorageDelete"
   }
 
-  depends_on = [azurerm_storage_account.main]
+    depends_on = [azurerm_storage_account.main]
 }
