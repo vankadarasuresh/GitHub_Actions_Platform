@@ -177,7 +177,7 @@ jobs:
         run: |
           cd terraform-modules/virtual-machines
           echo "Attempting to capture terraform outputs..."
-          OUTPUTS=$(terraform output -lock=false -json 2>&1) || {
+          OUTPUTS=$(terraform output -json 2>&1) || {
             echo "Error capturing outputs: $OUTPUTS"
             exit 0
           }
