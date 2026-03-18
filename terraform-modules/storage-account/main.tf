@@ -28,6 +28,8 @@ resource "azurerm_storage_account" "main" {
 
   # Blob properties for soft delete
   blob_properties {
+    change_feed_enabled = true
+    
     delete_retention_policy {
       days = var.blob_delete_retention_days
     }
