@@ -1,0 +1,103 @@
+# Azure Terraform Remote State Backend Configuration Template
+# 
+# PURPOSE: This template shows application teams how to configure remote state management
+# in Azure Storage. Terraform state files should NEVER be committed to version control.
+#
+# INSTRUCTIONS FOR APPLICATION TEAMS:
+# 1. Copy this file to your application repository root: backend.tf
+# 2. Replace the VALUES BELOW with your actual Azure details
+# 3. Run: terraform init
+# 4. Terraform will automatically detect and use this backend configuration
+
+terraform {
+  required_version = ">= 1.4"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+  }
+
+  # CONFIGURE YOUR REMOTE STATE BACKEND
+  # Azure Storage backend stores terraform.tfstate securely in Azure
+  backend "azurerm" {
+    # REPLACE BELOW: Your Azure subscription resource group where backend storage lives
+    resource_group_name  = "replace-with-your-rg-name"           # e.g., "terraform-state-rg"
+
+    # REPLACE BELOW: Storage account name (must be globally unique, lowercase, no hyphens)
+    storage_account_name = "replacewithstorageacctname"           # e.g., "tfstatedev123"
+
+    # REPLACE BELOW: Container name in the storage account (stores state files)
+    container_name       = "terraform-state"                       # e.g., "dev-state", "prod-state"
+
+    # REPLACE BELOW: State file name (one per environment is recommended)
+    # Examples: storage.tfstate, resource-group.tfstate, vms.tfstate
+    key                  = "terraform.tfstate"                     # Unique per deployment
+
+    # REPLACE BELOW: Your Azure Storage account access key
+    # HOW TO GET: Azure Portal → Storage Account → Access Keys → key1
+    # ⚠️ NEVER commit this key! Use GitHub Secrets instead (see setup guide)
+    # access_key = "..." # Populated by ARM_ACCESS_KEY environment variable
+
+    # OPTIONAL: Set to true in shared environments (slows down operations slightly)
+    # skip_provider_registration = false
+  }
+}
+
+# ============================================================================
+# PROVIDER CONFIGURATION
+# ============================================================================
+
+provider "azurerm" {
+  features {}
+
+  # Azure authentication handled by environment variables set by GitHub Actions:
+  # ARM_CLIENT_ID, ARM_CLIENT_SECRET, ARM_SUBSCRIPTION_ID, ARM_TENANT_ID
+  # These are automatically set by the platform workflow
+}
+
+# ============================================================================
+# HOW TO SET UP AZURE STORAGE BACKEND (FOR TEAMS)
+# ============================================================================
+#
+# STEP 1: Create Azure Storage Account for Terraform State
+#   az storage account create \
+#     --name "replace-with-storage-acct-name" \
+#     --resource-group "replace-with-rg-name" \
+#     --location "eastus" \
+#     --sku Standard_LRS
+#
+# STEP 2: Create Container in Storage Account
+#   az storage container create \
+#     --name "terraform-state" \
+#     --account-name "replace-with-storage-acct-name"
+#
+# STEP 3: Get Storage Account Access Key
+#   az storage account keys list \
+#     --resource-group "replace-with-rg-name" \
+#     --account-name "replace-with-storage-acct-name"
+#
+# STEP 4: Add to GitHub Secrets
+#   Setting → Secrets and variables → Actions → New repository secret
+#   Name: ARM_ACCESS_KEY
+#   Value: <access key from STEP 3>
+#
+# STEP 5: Initialize Terraform
+#   terraform init
+#   # When prompted for backend access key, leave blank or provide ARM_ACCESS_KEY
+#   export ARM_ACCESS_KEY="<your-access-key>"
+#   terraform init
+#
+# ============================================================================
+# SECURITY BEST PRACTICES
+# ============================================================================
+#
+# ✓ Store access key in GitHub Secrets (never in code)
+# ✓ Enable storage account encryption at rest
+# ✓ Use managed identity when possible (instead of service principal)
+# ✓ Restrict access via network rules and firewall
+# ✓ Enable soft delete on storage account
+# ✓ Use separate storage accounts per environment (dev, staging, prod)
+#
+# ============================================================================

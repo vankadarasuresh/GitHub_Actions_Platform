@@ -1,0 +1,108 @@
+name: Platform - Deploy Azure Storage Account
+
+# This is a reusable workflow for deploying Azure Storage Account infrastructure
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Environment name (dev, staging, prod)'
+        required: true
+        type: string
+      tfvars_file:
+        description: 'Path to terraform variables file'
+        required: true
+        type: string
+      terraform_version:
+        description: 'Terraform version to use'
+        required: false
+        type: string
+        default: '1.5.0'
+    outputs:
+      storage_account_id:
+        description: 'Azure Storage Account ID'
+        value: ${{ jobs.deploy.outputs.storage_account_id }}
+      storage_account_name:
+        description: 'Azure Storage Account Name'
+        value: ${{ jobs.deploy.outputs.storage_account_name }}
+      storage_account_primary_connection_string:
+        description: 'Storage Account Primary Connection String'
+        value: ${{ jobs.deploy.outputs.storage_account_primary_connection_string }}
+
+jobs:
+  init:
+    name: Validate Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate environment
+        run: |
+          if [[ "${{ inputs.environment }}" != "dev" && "${{ inputs.environment }}" != "staging" && "${{ inputs.environment }}" != "prod" ]]; then
+            echo "Invalid environment: ${{ inputs.environment }}"
+            exit 1
+          fi
+          echo "✓ Environment validation passed"
+
+  deploy:
+    name: Deploy Storage Account
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    needs: init
+    outputs:
+      storage_account_id: ${{ steps.terraform_output.outputs.storage_account_id }}
+      storage_account_name: ${{ steps.terraform_output.outputs.storage_account_name }}
+      storage_account_primary_connection_string: ${{ steps.terraform_output.outputs.storage_account_primary_connection_string }}
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+
+      - name: Authenticate to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform-modules/storage-account
+          terraform init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          cd terraform-modules/storage-account
+          terraform plan -var-file="${{ inputs.tfvars_file }}" -out=tfplan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Terraform Apply
+        run: |
+          cd terraform-modules/storage-account
+          terraform apply -auto-approve tfplan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Capture Terraform Outputs
+        id: terraform_output
+        run: |
+          cd terraform-modules/storage-account
+          echo "storage_account_id=$(terraform output -raw storage_account_id)" >> $GITHUB_OUTPUT
+          echo "storage_account_name=$(terraform output -raw storage_account_name)" >> $GITHUB_OUTPUT
+          echo "storage_account_primary_connection_string=$(terraform output -raw storage_account_primary_connection_string)" >> $GITHUB_OUTPUT
+
+      - name: Azure Logout
+        run: az logout

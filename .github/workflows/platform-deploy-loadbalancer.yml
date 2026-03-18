@@ -1,0 +1,115 @@
+name: Platform - Deploy Azure Load Balancer
+
+# This is a reusable workflow for deploying Azure Load Balancer infrastructure
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Environment name (dev, staging, prod)'
+        required: true
+        type: string
+      tfvars_file:
+        description: 'Path to terraform variables file'
+        required: true
+        type: string
+      terraform_version:
+        description: 'Terraform version to use'
+        required: false
+        type: string
+        default: '1.5.0'
+      backend_pool_ids: 
+        description: 'Backend pool IDs from VM deployment'
+        required: true
+        type: string
+    outputs:
+      loadbalancer_id:
+        description: 'Azure Load Balancer ID'
+        value: ${{ jobs.deploy.outputs.loadbalancer_id }}
+      loadbalancer_frontend_ip:
+        description: 'Load Balancer Frontend IP'
+        value: ${{ jobs.deploy.outputs.loadbalancer_frontend_ip }}
+      loadbalancer_fqdn:
+        description: 'Load Balancer FQDN'
+        value: ${{ jobs.deploy.outputs.loadbalancer_fqdn }}
+
+jobs:
+  init:
+    name: Validate Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate environment
+        run: |
+          if [[ "${{ inputs.environment }}" != "dev" && "${{ inputs.environment }}" != "staging" && "${{ inputs.environment }}" != "prod" ]]; then
+            echo "Invalid environment: ${{ inputs.environment }}"
+            exit 1
+          fi
+          echo "✓ Environment validation passed"
+
+  deploy:
+    name: Deploy Load Balancer
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    needs: init
+    outputs:
+      loadbalancer_id: ${{ steps.terraform_output.outputs.loadbalancer_id }}
+      loadbalancer_frontend_ip: ${{ steps.terraform_output.outputs.loadbalancer_frontend_ip }}
+      loadbalancer_fqdn: ${{ steps.terraform_output.outputs.loadbalancer_fqdn }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+
+      - name: Authenticate to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform-modules/load-balancer
+          terraform init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          cd terraform-modules/load-balancer
+          terraform plan \
+            -var-file="${{ inputs.tfvars_file }}" \
+            -var="backend_pool_ids=${{ inputs.backend_pool_ids }}" \
+            -out=tfplan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Terraform Apply
+        run: |
+          cd terraform-modules/load-balancer
+          terraform apply -auto-approve tfplan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Capture Terraform Outputs
+        id: terraform_output
+        run: |
+          cd terraform-modules/load-balancer
+          echo "loadbalancer_id=$(terraform output -raw loadbalancer_id)" >> $GITHUB_OUTPUT
+          echo "loadbalancer_frontend_ip=$(terraform output -raw loadbalancer_frontend_ip)" >> $GITHUB_OUTPUT
+          echo "loadbalancer_fqdn=$(terraform output -raw loadbalancer_fqdn)" >> $GITHUB_OUTPUT
+
+      - name: Azure Logout
+        run: az logout
