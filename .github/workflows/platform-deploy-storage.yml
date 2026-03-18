@@ -181,9 +181,14 @@ jobs:
             echo "No outputs available"
             exit 0
           fi
-          echo "storage_account_id=$(echo $OUTPUTS | jq -r '.storage_account_id.value')" >> $GITHUB_OUTPUT
-          echo "storage_account_name=$(echo $OUTPUTS | jq -r '.storage_account_name.value')" >> $GITHUB_OUTPUT
-          echo "storage_account_primary_connection_string=$(echo $OUTPUTS | jq -r '.storage_account_primary_connection_string.value')" >> $GITHUB_OUTPUT
+          echo "Raw terraform output:"
+          echo "$OUTPUTS"
+          echo "---"
+          echo "Parsing outputs with jq..."
+          echo "storage_account_id=$(echo $OUTPUTS | jq -r '.storage_account_id.value // "N/A"')" >> $GITHUB_OUTPUT
+          echo "storage_account_name=$(echo $OUTPUTS | jq -r '.storage_account_name.value // "N/A"')" >> $GITHUB_OUTPUT
+          echo "storage_account_primary_connection_string=$(echo $OUTPUTS | jq -r '.storage_account_primary_connection_string.value // "N/A"')" >> $GITHUB_OUTPUT
+          echo "Output capture completed"
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
