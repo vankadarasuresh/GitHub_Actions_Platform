@@ -179,14 +179,18 @@ jobs:
         continue-on-error: true
         run: |
           cd terraform-modules/load-balancer
-          if terraform output -lock=false -json > /dev/null 2>&1; then
-            OUTPUTS=$(terraform output -lock=false -json)
-            echo "loadbalancer_id=$(echo $OUTPUTS | jq -r '.loadbalancer_id.value')" >> $GITHUB_OUTPUT
-            echo "loadbalancer_frontend_ip=$(echo $OUTPUTS | jq -r '.loadbalancer_frontend_ip.value')" >> $GITHUB_OUTPUT
-            echo "loadbalancer_fqdn=$(echo $OUTPUTS | jq -r '.loadbalancer_fqdn.value')" >> $GITHUB_OUTPUT
-          else
-            echo "No outputs available - terraform may not have completed successfully"
+          echo "Attempting to capture terraform outputs..."
+          OUTPUTS=$(terraform output -lock=false -json 2>&1) || {
+            echo "Error capturing outputs: $OUTPUTS"
+            exit 0
+          }
+          if [ -z "$OUTPUTS" ]; then
+            echo "No outputs available"
+            exit 0
           fi
+          echo "loadbalancer_id=$(echo $OUTPUTS | jq -r '.loadbalancer_id.value')" >> $GITHUB_OUTPUT
+          echo "loadbalancer_frontend_ip=$(echo $OUTPUTS | jq -r '.loadbalancer_frontend_ip.value')" >> $GITHUB_OUTPUT
+          echo "loadbalancer_fqdn=$(echo $OUTPUTS | jq -r '.loadbalancer_fqdn.value')" >> $GITHUB_OUTPUT
 
       - name: Azure Logout
         run: az logout

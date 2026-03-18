@@ -176,15 +176,19 @@ jobs:
         continue-on-error: true
         run: |
           cd terraform-modules/virtual-machines
-          if terraform output -lock=false -json > /dev/null 2>&1; then
-            OUTPUTS=$(terraform output -lock=false -json)
-            echo "vm_ids=$(echo $OUTPUTS | jq -r '.vm_ids.value')" >> $GITHUB_OUTPUT
-            echo "vm_private_ips=$(echo $OUTPUTS | jq -r '.vm_private_ips.value')" >> $GITHUB_OUTPUT
-            echo "vm_public_ips=$(echo $OUTPUTS | jq -r '.vm_public_ips.value')" >> $GITHUB_OUTPUT
-            echo "network_interface_ids=$(echo $OUTPUTS | jq -r '.network_interface_ids.value')" >> $GITHUB_OUTPUT
-          else
-            echo "No outputs available - terraform may not have completed successfully"
+          echo "Attempting to capture terraform outputs..."
+          OUTPUTS=$(terraform output -lock=false -json 2>&1) || {
+            echo "Error capturing outputs: $OUTPUTS"
+            exit 0
+          }
+          if [ -z "$OUTPUTS" ]; then
+            echo "No outputs available"
+            exit 0
           fi
+          echo "vm_ids=$(echo $OUTPUTS | jq -r '.vm_ids.value')" >> $GITHUB_OUTPUT
+          echo "vm_private_ips=$(echo $OUTPUTS | jq -r '.vm_private_ips.value')" >> $GITHUB_OUTPUT
+          echo "vm_public_ips=$(echo $OUTPUTS | jq -r '.vm_public_ips.value')" >> $GITHUB_OUTPUT
+          echo "network_interface_ids=$(echo $OUTPUTS | jq -r '.network_interface_ids.value')" >> $GITHUB_OUTPUT
 
       - name: Azure Logout
         run: az logout

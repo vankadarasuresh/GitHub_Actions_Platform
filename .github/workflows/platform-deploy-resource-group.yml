@@ -167,13 +167,17 @@ jobs:
         continue-on-error: true
         run: |
           cd terraform-modules/resource-group
-          if terraform output -lock=false -json > /dev/null 2>&1; then
-            OUTPUTS=$(terraform output -lock=false -json)
-            echo "resource_group_id=$(echo $OUTPUTS | jq -r '.resource_group_id.value')" >> $GITHUB_OUTPUT
-            echo "resource_group_name=$(echo $OUTPUTS | jq -r '.resource_group_name.value')" >> $GITHUB_OUTPUT
-          else
-            echo "No outputs available - terraform may not have completed successfully"
+          echo "Attempting to capture terraform outputs..."
+          OUTPUTS=$(terraform output -lock=false -json 2>&1) || {
+            echo "Error capturing outputs: $OUTPUTS"
+            exit 0
+          }
+          if [ -z "$OUTPUTS" ]; then
+            echo "No outputs available"
+            exit 0
           fi
+          echo "resource_group_id=$(echo $OUTPUTS | jq -r '.resource_group_id.value')" >> $GITHUB_OUTPUT
+          echo "resource_group_name=$(echo $OUTPUTS | jq -r '.resource_group_name.value')" >> $GITHUB_OUTPUT
 
       - name: Azure Logout
         run: az logout

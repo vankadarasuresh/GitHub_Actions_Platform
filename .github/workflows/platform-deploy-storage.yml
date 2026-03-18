@@ -172,14 +172,18 @@ jobs:
         continue-on-error: true
         run: |
           cd terraform-modules/storage-account
-          if terraform output -lock=false -json > /dev/null 2>&1; then
-            OUTPUTS=$(terraform output -lock=false -json)
-            echo "storage_account_id=$(echo $OUTPUTS | jq -r '.storage_account_id.value')" >> $GITHUB_OUTPUT
-            echo "storage_account_name=$(echo $OUTPUTS | jq -r '.storage_account_name.value')" >> $GITHUB_OUTPUT
-            echo "storage_account_primary_connection_string=$(echo $OUTPUTS | jq -r '.storage_account_primary_connection_string.value')" >> $GITHUB_OUTPUT
-          else
-            echo "No outputs available - terraform may not have completed successfully"
+          echo "Attempting to capture terraform outputs..."
+          OUTPUTS=$(terraform output -lock=false -json 2>&1) || {
+            echo "Error capturing outputs: $OUTPUTS"
+            exit 0
+          }
+          if [ -z "$OUTPUTS" ]; then
+            echo "No outputs available"
+            exit 0
           fi
+          echo "storage_account_id=$(echo $OUTPUTS | jq -r '.storage_account_id.value')" >> $GITHUB_OUTPUT
+          echo "storage_account_name=$(echo $OUTPUTS | jq -r '.storage_account_name.value')" >> $GITHUB_OUTPUT
+          echo "storage_account_primary_connection_string=$(echo $OUTPUTS | jq -r '.storage_account_primary_connection_string.value')" >> $GITHUB_OUTPUT
 
       - name: Azure Logout
         run: az logout
