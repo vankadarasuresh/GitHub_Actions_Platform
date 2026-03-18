@@ -179,8 +179,8 @@ jobs:
         continue-on-error: true
         run: |
           cd terraform-modules/load-balancer
-          if terraform output -json > /dev/null 2>&1; then
-            OUTPUTS=$(terraform output -json)
+          if terraform output -lock=false -json > /dev/null 2>&1; then
+            OUTPUTS=$(terraform output -lock=false -json)
             echo "loadbalancer_id=$(echo $OUTPUTS | jq -r '.loadbalancer_id.value')" >> $GITHUB_OUTPUT
             echo "loadbalancer_frontend_ip=$(echo $OUTPUTS | jq -r '.loadbalancer_frontend_ip.value')" >> $GITHUB_OUTPUT
             echo "loadbalancer_fqdn=$(echo $OUTPUTS | jq -r '.loadbalancer_fqdn.value')" >> $GITHUB_OUTPUT

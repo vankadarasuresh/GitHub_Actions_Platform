@@ -172,8 +172,8 @@ jobs:
         continue-on-error: true
         run: |
           cd terraform-modules/storage-account
-          if terraform output -json > /dev/null 2>&1; then
-            OUTPUTS=$(terraform output -json)
+          if terraform output -lock=false -json > /dev/null 2>&1; then
+            OUTPUTS=$(terraform output -lock=false -json)
             echo "storage_account_id=$(echo $OUTPUTS | jq -r '.storage_account_id.value')" >> $GITHUB_OUTPUT
             echo "storage_account_name=$(echo $OUTPUTS | jq -r '.storage_account_name.value')" >> $GITHUB_OUTPUT
             echo "storage_account_primary_connection_string=$(echo $OUTPUTS | jq -r '.storage_account_primary_connection_string.value')" >> $GITHUB_OUTPUT

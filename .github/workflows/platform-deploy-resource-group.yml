@@ -167,8 +167,8 @@ jobs:
         continue-on-error: true
         run: |
           cd terraform-modules/resource-group
-          if terraform output -json > /dev/null 2>&1; then
-            OUTPUTS=$(terraform output -json)
+          if terraform output -lock=false -json > /dev/null 2>&1; then
+            OUTPUTS=$(terraform output -lock=false -json)
             echo "resource_group_id=$(echo $OUTPUTS | jq -r '.resource_group_id.value')" >> $GITHUB_OUTPUT
             echo "resource_group_name=$(echo $OUTPUTS | jq -r '.resource_group_name.value')" >> $GITHUB_OUTPUT
           else
