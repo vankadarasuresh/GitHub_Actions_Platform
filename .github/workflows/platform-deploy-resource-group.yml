@@ -117,7 +117,7 @@ jobs:
         id: plan
         run: |
           cd terraform-modules/resource-group
-          terraform plan -var-file="$GITHUB_WORKSPACE/application/${{ inputs.tfvars_file }}" -out=tfplan
+          terraform plan -lock-timeout=5m -var-file="$GITHUB_WORKSPACE/application/${{ inputs.tfvars_file }}" -out=tfplan
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -129,7 +129,7 @@ jobs:
         continue-on-error: true
         run: |
           cd terraform-modules/resource-group
-          terraform apply -auto-approve tfplan
+          terraform apply -lock-timeout=5m -auto-approve tfplan
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -141,9 +141,9 @@ jobs:
         run: |
           cd terraform-modules/resource-group
           echo "Apply failed, refreshing state and retrying..."
-          timeout 5m terraform apply -refresh-only -auto-approve || echo "Refresh timed out or failed"
+          timeout 5m terraform apply -lock-timeout=3m -refresh-only -auto-approve || echo "Refresh timed out or failed"
           echo "Retrying apply..."
-          timeout 10m terraform apply -auto-approve tfplan || exit 1
+          timeout 10m terraform apply -lock-timeout=5m -auto-approve tfplan || exit 1
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -154,7 +154,7 @@ jobs:
         if: steps.apply.outcome == 'skipped'
         run: |
           cd terraform-modules/resource-group
-          terraform apply -refresh-only -auto-approve
+          terraform apply -lock-timeout=5m -refresh-only -auto-approve
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
