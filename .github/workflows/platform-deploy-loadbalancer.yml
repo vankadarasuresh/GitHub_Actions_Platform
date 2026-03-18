@@ -101,8 +101,25 @@ jobs:
       - name: Terraform Init
         run: |
           cd terraform-modules/load-balancer
-          terraform init \
-            -backend-config="key=load-balancer.tfstate"
+          if [ "${{ inputs.environment }}" = "dev" ]; then
+            terraform init \
+              -backend-config="resource_group_name=rg-terraform-state-dev" \
+              -backend-config="storage_account_name=tfstatedev987" \
+              -backend-config="container_name=dev-state" \
+              -backend-config="key=load-balancer.tfstate"
+          elif [ "${{ inputs.environment }}" = "staging" ]; then
+            terraform init \
+              -backend-config="resource_group_name=rg-terraform-state-staging" \
+              -backend-config="storage_account_name=tfstatestaging123" \
+              -backend-config="container_name=staging-state" \
+              -backend-config="key=load-balancer.tfstate"
+          elif [ "${{ inputs.environment }}" = "prod" ]; then
+            terraform init \
+              -backend-config="resource_group_name=rg-terraform-state-prod" \
+              -backend-config="storage_account_name=tfstateprod999" \
+              -backend-config="container_name=prod-state" \
+              -backend-config="key=load-balancer.tfstate"
+          fi
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
