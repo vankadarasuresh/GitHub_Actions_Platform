@@ -150,9 +150,10 @@ jobs:
         id: terraform_output
         run: |
           cd terraform-modules/load-balancer
-          echo "loadbalancer_id=$(terraform output -raw loadbalancer_id)" >> $GITHUB_OUTPUT
-          echo "loadbalancer_frontend_ip=$(terraform output -raw loadbalancer_frontend_ip)" >> $GITHUB_OUTPUT
-          echo "loadbalancer_fqdn=$(terraform output -raw loadbalancer_fqdn)" >> $GITHUB_OUTPUT
+          OUTPUTS=$(terraform output -json)
+          echo "loadbalancer_id=$(echo $OUTPUTS | jq -r '.loadbalancer_id.value')" >> $GITHUB_OUTPUT
+          echo "loadbalancer_frontend_ip=$(echo $OUTPUTS | jq -r '.loadbalancer_frontend_ip.value')" >> $GITHUB_OUTPUT
+          echo "loadbalancer_fqdn=$(echo $OUTPUTS | jq -r '.loadbalancer_fqdn.value')" >> $GITHUB_OUTPUT
 
       - name: Azure Logout
         run: az logout

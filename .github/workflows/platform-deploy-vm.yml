@@ -147,10 +147,11 @@ jobs:
         id: terraform_output
         run: |
           cd terraform-modules/virtual-machines
-          echo "vm_ids=$(terraform output -raw vm_ids)" >> $GITHUB_OUTPUT
-          echo "vm_private_ips=$(terraform output -raw vm_private_ips)" >> $GITHUB_OUTPUT
-          echo "vm_public_ips=$(terraform output -raw vm_public_ips)" >> $GITHUB_OUTPUT
-          echo "network_interface_ids=$(terraform output -raw network_interface_ids)" >> $GITHUB_OUTPUT
+          OUTPUTS=$(terraform output -json)
+          echo "vm_ids=$(echo $OUTPUTS | jq -r '.vm_ids.value')" >> $GITHUB_OUTPUT
+          echo "vm_private_ips=$(echo $OUTPUTS | jq -r '.vm_private_ips.value')" >> $GITHUB_OUTPUT
+          echo "vm_public_ips=$(echo $OUTPUTS | jq -r '.vm_public_ips.value')" >> $GITHUB_OUTPUT
+          echo "network_interface_ids=$(echo $OUTPUTS | jq -r '.network_interface_ids.value')" >> $GITHUB_OUTPUT
 
       - name: Azure Logout
         run: az logout

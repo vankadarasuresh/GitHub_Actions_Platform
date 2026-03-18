@@ -143,9 +143,10 @@ jobs:
         id: terraform_output
         run: |
           cd terraform-modules/storage-account
-          echo "storage_account_id=$(terraform output -raw storage_account_id)" >> $GITHUB_OUTPUT
-          echo "storage_account_name=$(terraform output -raw storage_account_name)" >> $GITHUB_OUTPUT
-          echo "storage_account_primary_connection_string=$(terraform output -raw storage_account_primary_connection_string)" >> $GITHUB_OUTPUT
+          OUTPUTS=$(terraform output -json)
+          echo "storage_account_id=$(echo $OUTPUTS | jq -r '.storage_account_id.value')" >> $GITHUB_OUTPUT
+          echo "storage_account_name=$(echo $OUTPUTS | jq -r '.storage_account_name.value')" >> $GITHUB_OUTPUT
+          echo "storage_account_primary_connection_string=$(echo $OUTPUTS | jq -r '.storage_account_primary_connection_string.value')" >> $GITHUB_OUTPUT
 
       - name: Azure Logout
         run: az logout

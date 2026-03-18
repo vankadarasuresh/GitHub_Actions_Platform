@@ -138,8 +138,9 @@ jobs:
         id: terraform_output
         run: |
           cd terraform-modules/resource-group
-          echo "resource_group_id=$(terraform output -raw id)" >> $GITHUB_OUTPUT
-          echo "resource_group_name=$(terraform output -raw name)" >> $GITHUB_OUTPUT
+          OUTPUTS=$(terraform output -json)
+          echo "resource_group_id=$(echo $OUTPUTS | jq -r '.resource_group_id.value')" >> $GITHUB_OUTPUT
+          echo "resource_group_name=$(echo $OUTPUTS | jq -r '.resource_group_name.value')" >> $GITHUB_OUTPUT
 
       - name: Azure Logout
         run: az logout
