@@ -178,6 +178,11 @@ jobs:
           fi
           echo "resource_group_id=$(echo $OUTPUTS | jq -r '.resource_group_id.value')" >> $GITHUB_OUTPUT
           echo "resource_group_name=$(echo $OUTPUTS | jq -r '.resource_group_name.value')" >> $GITHUB_OUTPUT
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Azure Logout
         run: az logout
