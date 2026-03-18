@@ -151,11 +151,17 @@ jobs:
 
       - name: Capture Terraform Outputs
         id: terraform_output
+        if: steps.apply.outcome == 'success' || steps.apply.outcome == 'skipped'
+        continue-on-error: true
         run: |
           cd terraform-modules/resource-group
-          OUTPUTS=$(terraform output -json)
-          echo "resource_group_id=$(echo $OUTPUTS | jq -r '.resource_group_id.value')" >> $GITHUB_OUTPUT
-          echo "resource_group_name=$(echo $OUTPUTS | jq -r '.resource_group_name.value')" >> $GITHUB_OUTPUT
+          if terraform output -json > /dev/null 2>&1; then
+            OUTPUTS=$(terraform output -json)
+            echo "resource_group_id=$(echo $OUTPUTS | jq -r '.resource_group_id.value')" >> $GITHUB_OUTPUT
+            echo "resource_group_name=$(echo $OUTPUTS | jq -r '.resource_group_name.value')" >> $GITHUB_OUTPUT
+          else
+            echo "No outputs available - terraform may not have completed successfully"
+          fi
 
       - name: Azure Logout
         run: az logout
