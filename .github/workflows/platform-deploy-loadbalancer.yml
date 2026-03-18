@@ -21,6 +21,25 @@ on:
         description: 'Backend pool IDs from VM deployment'
         required: true
         type: string
+    secrets:
+      AZURE_CREDENTIALS:
+        description: 'Azure credentials JSON for authentication'
+        required: true
+      AZURE_CLIENT_ID:
+        description: 'Azure Service Principal Client ID'
+        required: true
+      AZURE_CLIENT_SECRET:
+        description: 'Azure Service Principal Client Secret'
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        description: 'Azure Subscription ID'
+        required: true
+      AZURE_TENANT_ID:
+        description: 'Azure Tenant ID'
+        required: true
+      ARM_ACCESS_KEY:
+        description: 'ARM Access Key for Terraform backend'
+        required: true
     outputs:
       loadbalancer_id:
         description: 'Azure Load Balancer ID'
