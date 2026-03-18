@@ -180,17 +180,17 @@ jobs:
         run: |
           cd terraform-modules/load-balancer
           echo "Attempting to capture terraform outputs..."
-          OUTPUTS=$(terraform output -json 2>&1) || {
-            echo "Error capturing outputs: $OUTPUTS"
+          OUTPUTS=$(terraform output -json 2>&1 | tail -n +2) || {
+            echo "Error capturing outputs"
             exit 0
           }
           if [ -z "$OUTPUTS" ]; then
             echo "No outputs available"
             exit 0
           fi
-          echo "loadbalancer_id=$(echo $OUTPUTS | jq -r '.loadbalancer_id.value')" >> $GITHUB_OUTPUT
-          echo "loadbalancer_frontend_ip=$(echo $OUTPUTS | jq -r '.loadbalancer_frontend_ip.value')" >> $GITHUB_OUTPUT
-          echo "loadbalancer_fqdn=$(echo $OUTPUTS | jq -r '.loadbalancer_fqdn.value')" >> $GITHUB_OUTPUT
+          echo "loadbalancer_id=$(echo $OUTPUTS | jq -r '.loadbalancer_id.value // "N/A"')" >> $GITHUB_OUTPUT
+          echo "loadbalancer_frontend_ip=$(echo $OUTPUTS | jq -r '.loadbalancer_frontend_ip.value // "N/A"')" >> $GITHUB_OUTPUT
+          echo "loadbalancer_fqdn=$(echo $OUTPUTS | jq -r '.loadbalancer_fqdn.value // "N/A"')" >> $GITHUB_OUTPUT
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}

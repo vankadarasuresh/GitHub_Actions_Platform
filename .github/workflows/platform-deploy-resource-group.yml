@@ -168,16 +168,16 @@ jobs:
         run: |
           cd terraform-modules/resource-group
           echo "Attempting to capture terraform outputs..."
-          OUTPUTS=$(terraform output -json 2>&1) || {
-            echo "Error capturing outputs: $OUTPUTS"
+          OUTPUTS=$(terraform output -json 2>&1 | tail -n +2) || {
+            echo "Error capturing outputs"
             exit 0
           }
           if [ -z "$OUTPUTS" ]; then
             echo "No outputs available"
             exit 0
           fi
-          echo "resource_group_id=$(echo $OUTPUTS | jq -r '.resource_group_id.value')" >> $GITHUB_OUTPUT
-          echo "resource_group_name=$(echo $OUTPUTS | jq -r '.resource_group_name.value')" >> $GITHUB_OUTPUT
+          echo "resource_group_id=$(echo $OUTPUTS | jq -r '.resource_group_id.value // "N/A"')" >> $GITHUB_OUTPUT
+          echo "resource_group_name=$(echo $OUTPUTS | jq -r '.resource_group_name.value // "N/A"')" >> $GITHUB_OUTPUT
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
